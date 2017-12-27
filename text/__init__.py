@@ -1,11 +1,22 @@
 import re
 from text import cleaners
 from text.symbols import symbols
+from text.prosody_symbols import phones, syllables
 
 
 # Mappings from symbol to numeric ID and vice versa:
 _symbol_to_id = {s: i for i, s in enumerate(symbols)}
 _id_to_symbol = {i: s for i, s in enumerate(symbols)}
+
+# Mappings from phone to numeric ID and vice versa:
+_phone_to_id = {s: i for i, s in enumerate(phones)}
+_id_to_phone = {i: s for i, s in enumerate(phones)}
+
+# Mappings from syllable to numeric ID and vice versa:
+_syllable_to_id = {s: i for i, s in enumerate(syllables)}
+_id_to_syllable = {i: s for i, s in enumerate(syllables)}
+
+
 
 # Regular expression matching text enclosed in curly braces:
 _curly_re = re.compile(r'(.*?)\{(.+?)\}(.*)')
@@ -40,6 +51,36 @@ def text_to_sequence(text, cleaner_names):
   sequence.append(_symbol_to_id['~'])
   return sequence
 
+def phone_to_sequence(text, cleaner_names):
+  '''Converts a string of text to a sequence of IDs corresponding to the symbols in the text.
+
+    The text can optionally have ARPAbet sequences enclosed in curly braces embedded
+    in it. For example, "Turn left on {HH AW1 S S T AH0 N} Street."
+
+    Args:
+      text: string to convert to a sequence
+      cleaner_names: names of the cleaner functions to run the text through
+
+    Returns:
+      List of integers corresponding to the symbols in the text
+  '''
+  sequence = []
+
+  # Check for curly braces and treat their contents as ARPAbet:
+  sequence += _phones_to_sequence(_clean_text(text, cleaner_names))
+  sequence.append(_symbol_to_id['~'])
+  return sequence
+
+def sequence_to_phone(sequence):
+  '''Converts a sequence of IDs back to a string'''
+  result = ''
+  for phone_id in sequence:
+    if phone_id in _id_to_phone:
+      s = _id_to_phone[phone_id]
+      result += s
+  return result
+
+
 
 def sequence_to_text(sequence):
   '''Converts a sequence of IDs back to a string'''
@@ -66,6 +107,13 @@ def _clean_text(text, cleaner_names):
 def _symbols_to_sequence(symbols):
   return [_symbol_to_id[s] for s in symbols if _should_keep_symbol(s)]
 
+def _phones_to_sequence(phones):
+  if type(phones) is str:
+    phones=phones.split()
+  return [_phone_to_id[s] for s in phones]
+
+def _syllables_to_sequence(syllables):
+  return [_syllable_to_id[s] for s in syllables]
 
 def _arpabet_to_sequence(text):
   return _symbols_to_sequence(['@' + s for s in text.split()])
